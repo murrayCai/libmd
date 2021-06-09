@@ -45,6 +45,8 @@ typedef enum{
     MDT_CONTENT_FONT_BOLD_ITALIC,
     MDT_CONTENT_FONT_MIDDLE_LINE,
     MDT_CONTENT_FONT_BOTTOM_LINE,
+    MDT_CONTENT_FONT_COLOR_PREFIX,
+    MDT_CONTENT_FONT_COLOR_SUFFIX,
     MDT_CONTENT_LINK,
     MDT_CONTENT_LINK_TEXT,
     MDT_CONTENT_LINK_IMAGE,
@@ -103,6 +105,8 @@ typedef enum{
             case MDT_CONTENT_FONT_BOLD_ITALIC:  name = "font_bold_italic"; break;\
             case MDT_CONTENT_FONT_MIDDLE_LINE:  name = "font_middle_line"; break;\
             case MDT_CONTENT_FONT_BOTTOM_LINE:  name = "font_bottom_line"; break;\
+            case MDT_CONTENT_FONT_COLOR_PREFIX: name = "font_color_prefix"; break;\
+            case MDT_CONTENT_FONT_COLOR_SUFFIX: name = "font_color_suffix"; break;\
             case MDT_CONTENT_LINK:              name = "link"; break;\
             case MDT_CONTENT_LINK_TEXT:         name = "link_text"; break;\
             case MDT_CONTENT_LINK_IMAGE:        name = "link_image"; break;\
@@ -178,6 +182,7 @@ typedef struct{
     const char *suffixPos;
     unsigned int suffixLen;
 
+
     /* link image */
     const char *linkDescriptionPos;
     unsigned int linkDescriptionLen;
@@ -195,6 +200,7 @@ typedef struct md_result_s md_result_t;
 typedef struct{
     md_type_e type;
     unsigned int lineNo;
+    unsigned int listSortedIndex;
     
     const char *data;
     unsigned int dataSize;
@@ -215,6 +221,7 @@ struct md_result_s{
     arr_t *lines;
     int isMatchingTable;
     int matchingIndex;
+    unsigned int listSortedIndex;
     md_result_line_t *lastLineTableDefine;
     int isMatchingCodeTag;
     unsigned int matchingCodeTagPrefixLen;

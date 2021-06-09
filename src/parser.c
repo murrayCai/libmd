@@ -249,7 +249,7 @@ static int parse_line_table_contents(md_result_line_t *rl,md_result_line_t *rlTa
     if(isMatchingHeader){
         G_E(cellStartPos->used != tableCellsCount);
     }
-    
+
     int k = 0;
     md_table_cell_t *cellTmp = NULL,*cellTmpDefine = NULL;
     for(; k < cellStartPos->used; k++){
@@ -323,6 +323,9 @@ static int parse_line_contents(md_result_line_t *rl){
     unsigned int linkImageTitleLen = 0;
     unsigned int isSuccess = 0;
 
+    const char *colorPos = NULL;
+    unsigned int colorSize = 0;
+
 
     for(; i < dataLen; i++){
         contentSize = 0;
@@ -336,6 +339,8 @@ static int parse_line_contents(md_result_line_t *rl){
         linkImageUrlLen = 0;
         linkImageTitlePos = NULL;
         linkImageTitleLen = 0;
+        colorPos = NULL;
+        colorSize = 0;
         isSuccess = 0;
 
         c = data[i];
@@ -361,7 +366,6 @@ static int parse_line_contents(md_result_line_t *rl){
                 }else{
                     currType = MDT_NONE;
                 }
-
             }else if('~' == c){
                 if( IS_FONT_MIDDLE_LINE( data + i,dataLen - i,&contentSize) ){
                     i += contentSize;
@@ -372,16 +376,30 @@ static int parse_line_contents(md_result_line_t *rl){
                     currType = MDT_NONE;
                 }
             }else if('<' == c){
-                if( IS_FONT_BOTTOM_LINE(data + i,dataLen - i, &contentSize) ){
+                if( IS_FONT_BOTTOM(data + i,dataLen - i, &contentSize) ){
                     i += contentSize;
                     currType = MDT_CONTENT_FONT_BOTTOM_LINE;
                     prefixSize = 3;
                     suffixSize = 4;
-                }else if( IS_LINK( data + i, dataLen - i, &contentSize ) ){
+                } else if( IS_LINK( data + i, dataLen - i, &contentSize ) ){
                     i += contentSize;
                     currType = MDT_CONTENT_LINK;
                     prefixSize = 1;
                     suffixSize = 1;
+                } else if( IS_FONT_COLOR_PREFIX_TAG( data + i, dataLen - i) &&
+                        IS_FONT_COLOR_PREFIX(data + i, dataLen - i, &contentSize,
+                            colorPos,&colorSize) )
+                {
+                    currType = MDT_CONTENT_FONT_COLOR_PREFIX;
+                    prefixSize = colorPos - (data + i);
+                    suffixSize = contentSize - (colorPos + colorSize - (data + i));
+                    i += contentSize;
+                }else if( IS_FONT_COLOR_SUFFIX_TAG( data + i, dataLen - i) ){
+                    i += 7;
+                    contentSize = 7;
+                    currType = MDT_CONTENT_FONT_COLOR_SUFFIX;
+                    prefixSize = 0;
+                    suffixSize = 7;
                 }else{
                     currType = MDT_NONE;
                 }
@@ -403,17 +421,11 @@ static int parse_line_contents(md_result_line_t *rl){
                             &linkImageDescriptionPos, &linkImageDescriptionLen,
                             &linkImageUrlPos,&linkImageUrlLen,
                             &linkImageTitlePos,&linkImageTitleLen,&isSuccess));
-                printf("desc[%d][%s]\turl[%d][%s]\ttitle[%d][%s]\tsuccess[%d]\n",
-                        linkImageDescriptionLen,linkImageDescriptionPos,
-                        linkImageUrlLen,linkImageUrlPos,
-                        linkImageTitleLen,linkImageTitlePos,
-                        isSuccess);
                 if(isSuccess){
                     i += contentSize;
                     currType = MDT_CONTENT_LINK_TEXT;
                     prefixSize = 0;
                     suffixSize = 0;
-
                 }else{
                     currType = MDT_NONE;
                 }
@@ -450,6 +462,7 @@ static int parse_line_contents(md_result_line_t *rl){
                 }else{
 
                 }
+                i--;
             }else{
 
             }
@@ -499,7 +512,7 @@ static int parse_line(md_result_t *r){
                 isLinePrefix = 0;
                 rl->prefixPos = rl->data + i;
 
-// [area matching] check if code line auto with >4 prefix space
+                // [area matching] check if code line auto with >4 prefix space
                 if(i >= 4){
                     rl->type = MDT_LINE_CODE;
                     rl->isAutoCodeLine = 1;
@@ -516,7 +529,7 @@ static int parse_line(md_result_t *r){
                 R(get_line_type(rl));
                 unsigned int remainDataLen = rl->dataSize - (rl->prefixPos - rl->data) - rl->prefixLen;
 
-// [area matching] check if code line with tag
+                // [area matching] check if code line with tag
                 if(r->isMatchingCodeTag){
                     if( MDT_LINE_CODE_SUFFIX == rl->type ){
                         if(i <= r->matchingCodeTagSpacePrefixLen){
@@ -541,7 +554,7 @@ static int parse_line(md_result_t *r){
                     break;
                 }
 
-// [area matching] check if table matching
+                // [area matching] check if table matching
                 if(r->isMatchingTable) {
                     R(NULL == r->lastLineTableDefine);   
                     if( MDT_NONE == rl->type ){
@@ -562,12 +575,18 @@ static int parse_line(md_result_t *r){
                         r->lastLineTableDefine = NULL;
                     }
                 }
-// regular matching
+                // regular matching
 normal_match:
                 if( (MDT_LINE_TITLE_1 <= rl->type && MDT_LINE_TITLE_6 >= rl->type ) || 
                         (MDT_LINE_REF_1 <= rl->type && MDT_LINE_REF_16 >= rl->type) ||
-                        MDT_LINE_LIST_UN_SORT == rl->type || MDT_LINE_LIST_SORTED == rl->type || 
-                        MDT_NONE == rl->type){
+                        MDT_LINE_LIST_UN_SORT == rl->type || MDT_NONE == rl->type){
+                    if(remainDataLen > 0){
+                        R(parse_line_contents(rl));
+                    }else{
+
+                    }
+                }else if( MDT_LINE_LIST_SORTED == rl->type){
+                    rl->listSortedIndex = ++r->listSortedIndex;
                     if(remainDataLen > 0){
                         R(parse_line_contents(rl));
                     }else{
@@ -608,7 +627,7 @@ normal_match:
                         rl->type = MDT_NONE;
                     }
                 }else{
-
+                    r->listSortedIndex = 0;
                 }
                 break;
             }

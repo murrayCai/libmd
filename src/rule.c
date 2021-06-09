@@ -144,12 +144,14 @@ matching_url_char:
                     if(NULL == urlEndPos){
                         urlEndPos = str + _it;
                     }else{
+                        // printf("===========[%d]failed at[%d](%s):%s",__LINE__,_it,str,str + _it);
                     }
                     goto matching_url_end;
                 }else{
                     if( IS_URL_CHAR(str[_it]) ){
                         continue;
                     }else{
+                        // printf("===========[%d]failed at[%d](%s):%s",__LINE__,_it,str,str + _it);
                         break;
                     }
                 }
@@ -166,6 +168,7 @@ matching_url_end:
                 *isSuccess = 1;
                 goto end;
             }else{ // error
+                // printf("===========[%d]failed at[%d](%s):%s",__LINE__,_it,str,str + _it);
                 break;
             }
         }
@@ -181,7 +184,7 @@ match_title: // when matched " \"", then matching "\" )"
             prefixC = str[_it];
         }else{
             if('"' == str[_it]){
-                titleEndPos = str + _it - 1;
+                titleEndPos = str + _it;
             }else if(')' == str[_it]){
                 if(NULL == titleEndPos){
                     // just title's ) char
@@ -199,7 +202,6 @@ match_title: // when matched " \"", then matching "\" )"
                     if( isspace(str[_it]) ){
                         continue;
                     }else{
-                        printf("========%d\t%s\n",_it,str + _it);
                         break;
                     }
                 }

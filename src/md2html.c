@@ -69,9 +69,7 @@
             needMoreBufSize = currNeedSize - (bufSize - bufUsed); \
             needMoreBufSizeLv = CEILU(needMoreBufSize,bufSize); \
             needMallocBufLv = CEILU(needMoreBufSizeLv,2); \
-            printf("presize(%lu)\tused(%u)\t",bufSize,bufUsed);\
             bufSize *= needMallocBufLv;\
-            printf("need(%u)\tmore(%u)\tmoreLv(%u)\tmallocLv(%u)\tsize(%lu)\n",currNeedSize,needMoreBufSize,needMoreBufSizeLv,needMallocBufLv,bufSize);\
             G_E(REALLOC_TN(&buf,str_t,&bufSize)); \
         }\
     }while(0)
@@ -256,7 +254,6 @@ int md_result_2_mem_html(md_t *md,md_result_t *result,char **dist,unsigned int *
                 MEMCPY_2_BUF(currContentTemplate->prefixPos,currContentTemplate->prefixLen);
                 MEMCPY_MD_DATA_2_BUF(resultContent->contentPos,resultContent->contentLen);
                 MEMCPY_2_BUF(currContentTemplate->suffixPos,currContentTemplate->suffixLen);
-
             }else if( MDT_CONTENT_LINK_TEXT == resultContent->type ||
                     MDT_CONTENT_LINK_IMAGE == resultContent->type ||  
                     MDT_CONTENT_LINK == resultContent->type){
@@ -272,7 +269,7 @@ int md_result_2_mem_html(md_t *md,md_result_t *result,char **dist,unsigned int *
                 }else{
                     htmlLinkUrlPrefix = "<a href='";
                     htmlLinkTitlePrefix = "' title='";
-                    htmlLinkDescriptionPrefix = "' target='_blank' class='md-link'><span class='md-link-description'>";
+                    htmlLinkDescriptionPrefix = "' class='md-link'><span class='md-link-description'>";
                     htmlLinkSuffix = "</span></a>";
                 }
                 unsigned int _contentLen = strlen(htmlLinkUrlPrefix) + resultContent->linkUrlLen + 
@@ -371,6 +368,20 @@ int md_result_2_mem_html(md_t *md,md_result_t *result,char **dist,unsigned int *
                         }
                     }
                 }
+            }else if( MDT_CONTENT_FONT_COLOR_PREFIX == resultContent->type ){
+                currNeedSize =  currContentTemplate->prefixLen +  currContentTemplate->suffixLen + strlen("<font color=''>") + resultContent->contentLen;
+                CHECK_BUF_SIZE();
+                MEMCPY_2_BUF(currContentTemplate->prefixPos,currContentTemplate->prefixLen);
+                MEMCPY_2_BUF("<font color='",strlen("<font color='"));
+                MEMCPY_2_BUF(resultContent->contentPos,resultContent->contentLen);
+                MEMCPY_2_BUF("'>",strlen("'>"));
+                MEMCPY_2_BUF(currContentTemplate->suffixPos,currContentTemplate->suffixLen);
+            }else if( MDT_CONTENT_FONT_COLOR_SUFFIX == resultContent->type ){
+                currNeedSize =  currContentTemplate->prefixLen +  currContentTemplate->suffixLen + strlen("</font>");
+                CHECK_BUF_SIZE();
+                MEMCPY_2_BUF(currContentTemplate->prefixPos,currContentTemplate->prefixLen);
+                MEMCPY_2_BUF("</font>",strlen("</font>"));
+                MEMCPY_2_BUF(currContentTemplate->suffixPos,currContentTemplate->suffixLen);
             }else{
                 G_E(1);
             }

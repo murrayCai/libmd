@@ -1,6 +1,8 @@
 #ifndef __MD_RULE_H__
 #define __MD_RULE_H__
 
+#define PATTERN_FONT_COLOR "<font[[:space:]]+color[[:space:]]*=[[:space:]]*(\"*)[[:space:]]*(#[0-9a-f]+)[[:space:]]*(\"*)[[:space:]]*>" 
+
 #define CHAR_ZERO 0
 #define CHAR_CR 13
 #define CHAR_NL 10
@@ -251,21 +253,21 @@
         (_is);\
      })
 
-#define IS_FONT_BOTTOM_LINE_PREFIX_TAG(str,size) ( 2 < (size) && '<' == (str)[0] && ( 'u' == (str)[1] || 'U' == (str)[1] ) && '>' == (str)[2] )
-#define IS_FONT_BOTTOM_LINE_SUFFIX_TAG(str,size) ( 3 < (size) && '<' == (str)[0] && '/' == (str)[1] && ('u' == (str)[2]  || 'U' == (str)[2] )   && '>' == (str)[3])
+#define IS_FONT_BOTTOM_PREFIX_TAG(str,size) ( 2 < (size) && '<' == (str)[0] && ( 'u' == (str)[1] || 'U' == (str)[1] ) && '>' == (str)[2] )
+#define IS_FONT_BOTTOM_SUFFIX_TAG(str,size) ( 3 < (size) && '<' == (str)[0] && '/' == (str)[1] && ('u' == (str)[2]  || 'U' == (str)[2] )   && '>' == (str)[3])
 
-#define IS_FONT_BOTTOM_LINE(str,size,_pContentSize) \
+#define IS_FONT_BOTTOM(str,size,_pContentSize) \
     ({\
         int _it = 0,_is = 0;\
         char _tag = (str)[0],_prefix = CHAR_ZERO;\
-        if(IS_FONT_BOTTOM_LINE_PREFIX_TAG( (str) , (size) )){\
+        if(IS_FONT_BOTTOM_PREFIX_TAG( (str) , (size) )){\
             _prefix = _tag;\
             for(_it = 3;_it < (size); _it++){\
                 if(_tag == (str)[_it]){\
                     if(CHAR_SLASH == _prefix){\
                         _prefix = (str)[_it];\
                     }else{\
-                        if(IS_FONT_BOTTOM_LINE_SUFFIX_TAG( (str) + _it, (size) - _it )){\
+                        if(IS_FONT_BOTTOM_SUFFIX_TAG( (str) + _it, (size) - _it )){\
                             _is = 1;\
                             (*(_pContentSize)) = _it + 4;\
                         }else{\
@@ -282,6 +284,84 @@
         (_is);\
      })
 
+#define IS_FONT_COLOR_PREFIX_TAG(str,size) (5 < (size) && '<' == (str)[0] && ('f' == (str)[1] || 'F' == (str)[1] ) &&  ( 'o' == (str)[2] || 'O' == (str)[2] ) && ('n' == (str)[3] || 'N' == (str)[3] ) && ( 't' == (str)[4] || 'T' == (str)[4] ) && isspace((str)[5]) )
+
+#define IS_FONT_COLOR_DEFINE_PREFIX_TAG(str,size) (4 < (size) && ('c' == (str)[0] || 'C' == (str)[0] ) && ( 'o' == (str)[1] || 'O' == (str)[1] ) && ( 'l' == (str)[2] || 'L' == (str)[2] ) && ( 'o' == (str)[3] || 'O' == (str)[3] ) && ( 'r' == (str)[4] || 'R' == (str)[4] ) )
+
+#define IS_FONT_COLOR_SUFFIX_TAG(str,size) ( 6 < (size) && '<' == (str)[0] && '/' == (str)[1] && ('f' == (str)[2] || 'F' == (str)[2]) && ('o' == (str)[3] || 'O' == (str)[3]) && ('n' == (str)[4] || 'N' == (str)[4]) && ('t' == (str)[5] || 'T' == (str)[5]) && '>' == (str)[6] )
+
+#define IS_FONT_COLOR_PREFIX(str,size,pContentSize,pColorPos,pColorSize) \
+    ({\
+        int _it = 0,_is = 0,_isInColorPrefixSpace = 1,_isInColorDefine = 0,_isInColorDefineVal = 0,_isInColorQuto = 0;\
+        if( IS_FONT_COLOR_PREFIX_TAG( (str),(size) ) ){\
+            for(_it = 5; _it < (size); _it++){\
+                if(_isInColorPrefixSpace){\
+                    if(isspace( (str)[_it] )){\
+                        continue;\
+                    }else{\
+                        _isInColorPrefixSpace = 0;\
+                        if( IS_FONT_COLOR_DEFINE_PREFIX_TAG( (str) + _it, (size) - _it ) ){\
+                            _it += 4;\
+                            _isInColorDefine = 1;\
+                        }else{\
+                            break;\
+                        }\
+                    }\
+                }else{\
+                    if( _isInColorDefine ){\
+                       if(isspace( (str)[_it] )){\
+                            continue;\
+                       }else{\
+                           if('=' == (str)[_it]){\
+                               _isInColorDefine = 0;\
+                               _isInColorDefineVal = 1;\
+                           }else{\
+                               break;\
+                           }\
+                       }\
+                    }else{\
+                        if( _isInColorDefineVal ){\
+                            if( isspace( (str)[_it] ) ){\
+                                continue;\
+                            }else{\
+                                _isInColorDefineVal = 0;\
+                                if('"' == (str)[_it]){\
+                                    _isInColorQuto = 1;\
+                                    (pColorPos) = (str) + _it + 1;\
+                                }else{\
+                                    (pColorPos) = (str) + _it;\
+                                }\
+                            }\
+                        }else{\
+                            if(_isInColorDefineVal){\
+                                if('"' == (str)[_it]){\
+                                    (*(pColorSize)) = (str) + _it - pColorPos;\
+                                    _isInColorDefineVal = 0;\
+                                }else{\
+                                    continue;\
+                                }\
+                            }else{\
+                                if('>' == (str)[_it]){\
+                                    if( 0 == *(pColorSize) ){\
+                                        (*(pColorSize)) = (str) + _it - pColorPos;\
+                                    }\
+                                    (*(pContentSize)) = _it + 1;\
+                                    (_is) = 1;\
+                                    break;\
+                                }else{\
+                                    continue;\
+                                }\
+                            }\
+                        }\
+                    }\
+                }\
+            }\
+        }else{\
+            _is = 0;\
+        }\
+        (_is);\
+     })
+
 #define IS_LINK_PROTO_TAG(str,size) ( 3 < (size) && ':' == (str)[0] && '/' == (str)[1] && '/' == (str)[2] ) 
 
 #define IS_LINK_HTTP_TAG(str,size) ( 6 < (size) && ( 'h' == (str)[0] || 'H' == (str)[0] ) && ( 't' == (str)[1] || 'T' == (str)[1] ) && ( 't' == (str)[2] || 'T' == (str)[2]  ) && ( 'p' == (str)[3] || 'P' == (str)[3] ) && IS_LINK_PROTO_TAG( (str) + 4, (size) - 4 ))
@@ -290,7 +370,7 @@
 
 #define IS_LINK_FTP_TAG(str,size) ( 5 < (size) && ( 'f' == (str)[0] || 'F' == (str)[0] ) && ( 't' == (str)[1] || 'T' == (str)[1] ) && ( 'p' == (str)[2] || 'P' == (str)[2] )  && IS_LINK_PROTO_TAG( (str) + 3, (size) - 3 ) )
 
-#define IS_URL_CHAR(c) ( ( '0' <= (c) && '9' >= (c)) ||  ( 'a' <= (c) && 'z' >= (c) ) ||  ( 'a' <= (c) && 'z' >= (c) ) || ':' == (c) || '/' == (c) || '.' == (c) || '?' == (c) || '%' == (c) || '=' == (c) || '%' == (c) || '#' == (c) || '&' == (c) || '+' == (c) || '@' == (c) || '-' == (c) || '_' == (c) || '~' == (c) || '!' == (c) || '(' == (c) || ')' == (c) || ';' == (c) || '$' == (c) || ',' == (c) || '[' == (c) || ']' == (c) || "'"[0] == (c) )
+#define IS_URL_CHAR(c) ( ( '0' <= (c) && '9' >= (c)) ||  ( 'a' <= (c) && 'z' >= (c) ) ||  ( 'A' <= (c) && 'Z' >= (c) ) || ':' == (c) || '/' == (c) || '.' == (c) || '?' == (c) || '%' == (c) || '=' == (c) || '%' == (c) || '#' == (c) || '&' == (c) || '+' == (c) || '@' == (c) || '-' == (c) || '_' == (c) || '~' == (c) || '!' == (c) || '(' == (c) || ')' == (c) || ';' == (c) || '$' == (c) || ',' == (c) || '[' == (c) || ']' == (c) || "'"[0] == (c) )
 
 #define IS_LINK(str,size,_pContentSize) \
     ({\

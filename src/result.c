@@ -173,6 +173,11 @@ int md_result_contents_init(arr_t **contents){
     for(; i < MD_FILE_LINE_INIT_CONTENTS_COUNT; i++){
         G_E(arr_index((void **)&content,(*contents),i));
         G_E(ARR_INIT_WITH_DATA(&(content->cells),MD_TABLE_CELLS_INIT_COUNT,md_table_cell_t));
+        if(NULL == content->cells){
+            R(1);
+        }else{
+
+        }
     }
     return ret;
 
@@ -207,6 +212,7 @@ int md_result_contents_get_unused(md_result_content_t **dist,md_result_line_t *r
     R(NULL == rl->contents);
     if(rl->contentsUsed >= rl->contents->used){
         R(ARR_ADD_WITH_DATA(dist,rl->contents,md_result_content_t));
+        R(ARR_INIT_WITH_DATA(&((*dist)->cells),MD_TABLE_CELLS_INIT_COUNT,md_table_cell_t));
     }else{
         R(arr_index((void **)dist,rl->contents,rl->contentsUsed));
     }
